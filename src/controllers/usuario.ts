@@ -1,8 +1,12 @@
 import { Request, Response } from "express"
 import { badRequest, internalServerError, notFound, ok } from "../services/util";
 import { Usuario, usuarioModel } from './../models/usuario';
+import enviarEmailVerficacao from "../services/email";
+import { hash } from "bcrypt";
+import { randomInt } from "crypto";
+import { compare } from "bcrypt";
 
-const insertUsuario = (req: Request, res: Response) => {
+const insertUsuario = async (req: Request, res: Response) => {
 
     const usuario = req.body as Usuario
 
@@ -20,6 +24,11 @@ const insertUsuario = (req: Request, res: Response) => {
             return badRequest(res, "Informe a senha");
 
     }
+
+    const randomSalt = randomInt(10, 16)
+    const senhaHash = await hash(usuario.senha, randomSalt)
+
+    usuario.senha = senhaHash
 
     usuarioModel.insertUsuario(usuario)
         .then(usuario => {
@@ -92,10 +101,44 @@ const deleteUsuario = (req: Request, res: Response) => {
         .catch(err => internalServerError(res, err))
 }
 
+const loginUsuario = async (req: Request, res: Response) => {
+    try {
+        const {email, senha} = req.body
+
+        const resultSenhaCrypt = await usuarioModel.verificarUsuarioSenha(email)
+
+        const senhaString = String(senha) 
+
+        const senhaValida = await compare(senhaString, resultSenhaCrypt.senha)
+
+        if(senhaValida){
+            res.send("Logado com sucesso!") 
+        }else{
+            res.send("Acesso negado")
+        }
+    } catch (error: any) {
+        internalServerError(res, error)
+        return error.message
+    }
+}
+
+const verificarEmail = async (req: Request, res: Response) => {
+    try {
+        const email = req.params.email
+        const result = await enviarEmailVerficacao(email)
+        return result
+    } catch (error: any) {
+        internalServerError(res, error)
+        return error.message
+    }
+}
+
 export const usuarioController = {
     insertUsuario,
     updateUsuario,
     listUsuario,
     getUsuario,
-    deleteUsuario
+    deleteUsuario,
+    loginUsuario,
+    verificarEmail
 }

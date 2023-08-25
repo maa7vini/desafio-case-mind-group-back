@@ -5,7 +5,11 @@ export type Usuario = {
     nome: string;
     email: string;
     senha: string;
+    emailVerificado: number;
 }
+
+// Email não verificado = 0 \\
+// Email verificado = 1 \\
 
 const insertUsuario = async (usuario: Usuario) => {
     await dbQuery(`INSERT INTO usuarios (nome, email, senha) VALUES(?, ?, ?)`, 
@@ -13,7 +17,7 @@ const insertUsuario = async (usuario: Usuario) => {
 
     let retorno = await dbQuery(`SELECT seq AS Id FROM sqlite_sequence WHERE name = 'usuarios'`);
 
-    return retorno[0].Id as number | undefined;
+    return "Usuário cadastrado com sucesso";
 }
 
 const updateUsuario = async (usuario: Usuario) => {
@@ -39,10 +43,17 @@ const deleteUsuario = async (id: number) => {
     await dbQueryFirst(`DELETE FROM usuarios WHERE id = ?`, [id]);
 }
 
+const verificarUsuarioSenha = async (email: string) => {
+    const retorno = await dbQueryFirst(`SELECT senha FROM usuarios WHERE email = ?`, [email]);
+
+    return retorno
+}
+
 export const usuarioModel = {
     insertUsuario,
     updateUsuario,
     listUsuario,
     getUsuario,
-    deleteUsuario
+    deleteUsuario,
+    verificarUsuarioSenha
 }
